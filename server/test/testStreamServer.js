@@ -7,8 +7,12 @@ const StreamSession = require("../src/streamSession");
 let fs = require('fs');
 
 const request = require('supertest');
+
+const chai = require('chai');
 const expect = require('chai').expect;
 const assert = require('chai').assert;
+const assertArrays = require('chai-arrays');
+chai.use(assertArrays);
 
 const config = require( '../config' );
 
@@ -53,7 +57,7 @@ global.tracer = require( 'tracer' ).colorConsole({
 
     let testSession/*: StreamSession*/ = {
         id: '',
-        track_id: testTrackId1,
+        track_id: '',
         customer_id: 'BT2014:002:9acf38f6-d3c8-4429-a010-ed73088afbbd:1518437910234',
         device_id: 'DEV12345',
         name: 'Test session 01',
@@ -63,10 +67,45 @@ global.tracer = require( 'tracer' ).colorConsole({
         total_time: 0
     };
 
+    let testInvalidSession = Object.assign({}, testSession);
+
     describe('Streamer REST functions -', function () {
         testSession.total_time = (new Date(testSession.stop_time)).getTime() - (new Date(testSession.start_time)).getTime();
         testSession.moving_time = testSession.total_time - 1000;
 
+        it('Get empty sessions', function (done) {
+            this.timeout(20000);
+
+            request(testService.getExpress())
+                .get('/scp/sessions')
+                .set('Accept', 'application/json')
+                .expect('Content-Type', /json/)
+                .expect(200)
+                .end(function (err, res) {
+                    if (err) return done(err);
+
+                    expect(res.body.result).to.be.array();
+                    assert.equal(res.body.result.length, 0, "Must contain no Session ID");
+
+                    done();
+                });
+        });
+
+        it('Create session with INVALID track data', function (done) {
+
+            request(testService.getExpress())
+                .post('/scp/session')
+                .set('Accept', 'application/json')
+                .set('Content-Type', 'application/json')
+                .send({
+                    session: testInvalidSession
+                })
+                .expect('Content-Type', /json/)
+                .expect(400)
+                .end(done);
+        });
+
+        testSession.track_id = testTrackId1;
         it('Create session', function (done) {
             let testInvalidSession = Object.assign({}, testSession);
 
@@ -79,11 +118,11 @@ global.tracer = require( 'tracer' ).colorConsole({
                 })
                 .expect('Content-Type', /json/)
                 .expect(200)
-                .end(/*function (err, res) {
+                .end(function (err, res) {
                     if (err) return done(err);
-
+                    testSession.id = res.body.result.sessionID;
                     done();
-                }*/done);
+                });
         });
 
         // Modify session parameters
@@ -121,7 +160,7 @@ global.tracer = require( 'tracer' ).colorConsole({
             this.timeout(20000);
 
             request(testService.getExpress())
-                .get('/scp/session/' + testSessionUpdatedParameters.id)
+                .get('/scp/session/' + testSession.id)
                 .set('Accept', 'application/json')
                 .expect('Content-Type', /json/)
                 .expect(200)
@@ -142,6 +181,8 @@ global.tracer = require( 'tracer' ).colorConsole({
                 .expect(200)
                 .end(function (err, res) {
                     if (err) return done(err);
+
+                    assert.equal(res.body.result, testSession.id, "Must contain created Session ID");
 
                     done();
                 });

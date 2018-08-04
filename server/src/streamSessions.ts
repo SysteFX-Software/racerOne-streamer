@@ -109,8 +109,8 @@ export class StreamSessions {
             }
         }
         else {
-            return callback(0, { code: 'ER_DUP_ENTRY', sub_code: session.id,
-                HTTP_code: HttpStatus.CONFLICT, msg: "Session ID already exists" });
+            return callback(0, { code: 'ER_WRONG_DATA', sub_code: session.id,
+                HTTP_code: HttpStatus.BAD_REQUEST, msg: "Session data are invalid" });
         }
     }
 

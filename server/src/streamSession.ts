@@ -84,6 +84,14 @@ export class StreamSession {
         return true;
     }
 
+    public static validateTrackId(id: string): boolean {
+        if ( !id || id === "" ) {
+            return false;
+        }
+
+        return true;
+    }
+
     public static validateCustomerId(id: string): boolean {
         if ( !id || id === "" ) return false;
 
@@ -91,8 +99,13 @@ export class StreamSession {
     }
 
     public static validateParams(track: StreamSession): boolean {
-        track.state = StreamSessionState.DATA_VALID;
-        return true;
+        if(StreamSession.validateId(track.id) && StreamSession.validateTrackId(track.track_id) && StreamSession.validateCustomerId(track.customer_id)) {
+            track.state = StreamSessionState.DATA_VALID;
+            return true;
+        }
+
+        track.state = StreamSessionState.DATA_NO_DATA;
+        return false;
     }
 
     /**
