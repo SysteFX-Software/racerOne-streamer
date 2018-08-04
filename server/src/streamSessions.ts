@@ -31,6 +31,7 @@ export class StreamSessions {
     // CRUD operations
     //
     public create(sessionData: any, callback: any) {
+        console.log('StreamSessions::create');
         let _this = this;
 
         // unescape data
@@ -79,22 +80,32 @@ export class StreamSessions {
      * @param callback
      */
     public delete(sessionId: string, callback: any) {
-        callback(this._del(sessionId));
+        if(this._del(sessionId)) {
+            return callback(true, null);
+        }
+        else {
+            return callback(false, { code: 'ER_SESSION_NOT_FOUND', sub_code: sessionId,
+                HTTP_code: HttpStatus.NOT_FOUND, msg: "Session ID not found" });
+        }
     }
 
     //
     // Session manipulation
     //
     protected addSession(sessionData: any, callback: any) {
+        console.log('StreamSessions::addSession');
         let _this = this;
 
         let session = new StreamSession(sessionData);
         if (session && session.isValid()) {
             if(this._add(session.id, session)) {
-                callback(session.id, null);
+                console.log('StreamSessions::addSession - _add true');
+                callback(session.id, undefined);
             }
             else {
-
+                console.log('StreamSessions::addSession - _add false');
+                callback(null, { code: 'ER_SESSION_NOT_FOUND',
+                    HTTP_code: HttpStatus.NOT_FOUND, msg: "Session ID not found" });
             }
         }
         else {
@@ -137,6 +148,16 @@ export class StreamSessions {
         return this._get(sessionId);
     }
 
+    public getSessions(): string[] {
+        let sessions: string[] = [];
+        for(let sid in this.sessions) {
+            let session: StreamSession = this.sessions[sid];
+            sessions.push(session.id)
+        }
+
+        return sessions;
+    }
+
     /**
      * Add session object to cache
      * @param session
@@ -144,11 +165,11 @@ export class StreamSessions {
      */
     private _add(session:string, sessionObject: StreamSession): boolean {
         if(this.sessions[session] === undefined) {
-            return false;
-        }
-        else {
             this.sessions[session] = sessionObject;
             return true;
+        }
+        else {
+            return false;
         }
     }
 

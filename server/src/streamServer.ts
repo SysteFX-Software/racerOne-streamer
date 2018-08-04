@@ -150,7 +150,7 @@ export class RacerStreamerServer {
 
 	public createSendPkg(res: any, code: any, result: any, err: any = undefined) {
 		/* istanbul ignore next */
-		if (err !== undefined || err !== null) {
+		if (err !== undefined && err !== null) {
 			if (err.code === undefined) err['code'] = "NO_AUTH";
             if (err.msg === undefined) err['msg'] = "Not authorized";
             if (err.HTTP_code === undefined) err.HTTP_code = (code === undefined) ? HttpStatus.UNAUTHORIZED : code;
@@ -194,12 +194,12 @@ export class RacerStreamerServer {
             socket.emit('ack', {Status: 200});
 
             socket.on('CH01', (from: any, m: Message) => {
-                console.log('[server][CH01](message): %s', JSON.stringify(m));
+                console.log('[server][CH01](message): %s, from %s', JSON.stringify(m), JSON.stringify(from));
                 this.io.emit('message', m);
             });
 
             socket.on('message', (m: Message) => {
-                console.log('[server](message): %s', JSON.stringify(m));
+                console.log('[server](message): %s, from %s', JSON.stringify(m));
                 this.io.emit('message', m);
             });
 

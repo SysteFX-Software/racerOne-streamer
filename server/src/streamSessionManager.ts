@@ -64,8 +64,9 @@ export class StreamSessionManager {
     }
 
     public createSession(sessionData: any, callback: any) {
-        this.sessions.create(sessionData, (session: StreamSession) => {
-            callback(session);
+        console.log('StreamServer::createSession');
+        this.sessions.create(sessionData, (session: string, err) => {
+            callback(session, err);
         })
     }
 
@@ -73,6 +74,16 @@ export class StreamSessionManager {
         let session = this.getSession(sessionId);
         if(session) {
             callback(session.clientFriendly(), undefined);
+        }
+        else {
+            callback(null, true);
+        }
+    }
+
+    public getSessions(callback: any) {
+        let sessions = this.getSessionsList();
+        if(sessions) {
+            callback(sessions, undefined);
         }
         else {
             callback(null, true);
@@ -87,18 +98,28 @@ export class StreamSessionManager {
         return this.sessions.getSession(sessionId);
     };
 
+    public getSessionsList(): string[] {
+        return this.sessions.getSessions();
+    }
+
     public removeSession(sessionId: string, callback: any) {
         return this.sessions.delete(sessionId, callback);
     }
 
     public checkAuth(req: any, res: any, next: any, callback: any) {
+        console.log('StreamerServer::checkAuth');
+
         let session_id: number = req.query['sid'];
         if (!session_id) {
             session_id = req.headers['authorization'];
         }
 
-        const authObject = {};
-        authObject !== undefined ? callback(authObject) : this.server.sendPkg(res, HttpStatus.UNAUTHORIZED, undefined, { code: 'NO_AUTH' });
+        const authObject = { authenticated: true };
+        if(authObject) {
+            return callback(authObject);
+        }  else {
+            return this.server.sendPkg(res, HttpStatus.UNAUTHORIZED, undefined, { code: 'NO_AUTH' });
+        }
     };
 
     // Routing
@@ -129,6 +150,21 @@ export class StreamSessionManager {
                 });
             });
         });
+
+        express.get("/scp/sessions", function (req: any, res: any, next: any) {
+            global.tracer.log('StreamerServer, GET meta');
+            _this.checkAuth(req, res, next, function (authObject?: any) {
+                _this.getSessions(function (result: any, err: any) {
+                    if (!err) {
+                        _this.server.createSendPkg(res, HttpStatus.OK, result);
+                        next();
+                    }
+                    else {
+                        _this.server.createSendPkg(res, HttpStatus.NOT_FOUND, null, err);
+                    }
+                });
+            });
+        });
     }
 
     public setupUserPostApi(express: any) {
@@ -147,19 +183,28 @@ export class StreamSessionManager {
             global.tracer.log('StreamerServer, POST session');
 
             _this.checkAuth(req, res, next, function (authObject? : any) {
-                _this.createSession(req.body.session, function (result: any, err: any) {
-                    if (!err) {
-                        _this.server.createSendPkg(res, HttpStatus.OK, { sessionID: result } );
-                        next();
-                    }
-                    else {
-                        if (err.code === 'ER_DUP_ENTRY') {
-                            err.HTTP_code = HttpStatus.CONFLICT;
+                console.log('setupUserPostApi - after checkAuth');
+                if(authObject) {
+                    _this.createSession(req.body.session, function (result: any, err: any) {
+                        if (!err) {
+                            console.log('/scp/session - createSession succeeded');
+                            _this.server.createSendPkg(res, HttpStatus.OK, { sessionID: result } );
+                            next();
                         }
+                        else {
+                            global.tracer.log('/scp/session - createSession FAILED!')
 
-                        _this.server.createSendPkg(res, err.HTTP_code, null, err);
-                    }
-                });
+                            if (err.code === 'ER_DUP_ENTRY') {
+                                err.HTTP_code = HttpStatus.CONFLICT;
+                            }
+
+                            _this.server.createSendPkg(res, err.HTTP_code, null, err);
+                        }
+                    });
+                }
+                else {
+                    global.tracer.log('/scp/session - checkAuth FAILED!')
+                }
             });
         });
     }

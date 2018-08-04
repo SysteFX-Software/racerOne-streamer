@@ -19,8 +19,12 @@
     "tracer": "^0.9.1"
   },
   "devDependencies": {
+    "chai": "^4.1.2",
     "gulp": "~3.9.1",
     "gulp-typescript": "~3.2.1",
+    "mocha": "^5.2.0",
+    "supertest": "^3.1.0",
+    "ts-node": "^7.0.0",
     "typescript": "~2.5.0"
   }
 }
