@@ -3,6 +3,8 @@
  *
  */
 
+import {RacerStreamerServer} from "./streamServer";
+
 export enum StreamSessionState {
     DATA_VALID = 1,
     DATA_NO_DATA,
@@ -137,3 +139,6 @@ export class StreamSession {
         }
     }
 }
+//
+// declare var module: any;
+// (module).exports = StreamSession;

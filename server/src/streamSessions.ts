@@ -31,7 +31,6 @@ export class StreamSessions {
     // CRUD operations
     //
     public create(sessionData: any, callback: any) {
-        console.log('StreamSessions::create');
         let _this = this;
 
         // unescape data
@@ -93,17 +92,14 @@ export class StreamSessions {
     // Session manipulation
     //
     protected addSession(sessionData: any, callback: any) {
-        console.log('StreamSessions::addSession');
         let _this = this;
 
         let session = new StreamSession(sessionData);
         if (session && session.isValid()) {
             if(this._add(session.id, session)) {
-                console.log('StreamSessions::addSession - _add true');
                 callback(session.id, undefined);
             }
             else {
-                console.log('StreamSessions::addSession - _add false');
                 callback(null, { code: 'ER_SESSION_NOT_FOUND',
                     HTTP_code: HttpStatus.NOT_FOUND, msg: "Session ID not found" });
             }

@@ -1,6 +1,7 @@
 import { createServer, Server } from 'http';
 import * as express from 'express';
 import * as socketIo from 'socket.io-client';
+let HttpStatus = require('http-status-codes');
 
 import { Message } from '../../model';
 
@@ -25,22 +26,30 @@ export class StreamClient {
 
     private connect(): void {
         console.log('Connecting client on port %s.', this.port);
-        let socket = socketIo.connect('http://localhost:'+this.port, {reconnect: true});
+        let socket = socketIo.connect('http://localhost:'+this.port+'/strm', {reconnect: true});
 
         // Add a connect listener
         socket.on('connect', function (s) {
             console.log('Connected!');
 
-            console.log('Emitting message');
-            socket.emit('message', 'test msg');
+            console.log('Sending SYN');
+            let m = {session_id: 'SSTEST'};
+            socket.emit('syn', JSON.stringify(m));
         });
 
         socket.on('message', (m: Message) => {
             console.log('[server](message): %s', JSON.stringify(m));
         });
 
-        socket.on('ack', (m: Message) => {
-            console.log('[server](ack): %s', JSON.stringify(m));
+        socket.on('syn-ack', (m: any) => {
+            console.log('[server](syn-ack): %s', JSON.stringify(m));
+            if(m.status != HttpStatus.OK) {
+                socket.disconnect();
+            }
+        });
+
+        socket.on('disconnected', () => {
+            console.log('Disconnected!');
         });
     }
 

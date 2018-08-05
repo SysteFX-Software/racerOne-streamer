@@ -1,63 +1,4 @@
-// import { createServer, Server } from 'http';
-// import * as express from 'express';
-// import * as socketIo from 'socket.io';
-//
-// export class RacerStreamerServer {
-//     public static PORT:number = 8080;
-//     private app: express.Application;
-//     private server: Server;
-//     private io: SocketIO.Server;
-//     private port: string | number;
-//
-//     constructor(port: number) {
-//         RacerStreamerServer.PORT = port;
-//         this.createApp();
-//         this.config();
-//         this.createServer();
-//         this.sockets();
-//         this.listen();
-//     }
-//
-//     private createApp(): void {
-//         this.app = express();
-//     }
-//
-//     private createServer(): void {
-//         this.server = createServer(this.app);
-//     }
-//
-//     private config(): void {
-//         this.port = process.env.PORT || RacerStreamerServer.PORT;
-//     }
-//
-//     private sockets(): void {
-//         this.io = socketIo(this.server);
-//     }
-//
-//     private listen(): void {
-//         let _ths = this;
-//
-//         this.server.listen(this.port, () => {
-//             console.log('Running server on port %s', this.port);
-//         });
-//
-//         this.io.on('connect', (socket: any) => {
-//             console.log('Connected client on port %s.', this.port);
-//             socket.on('message', function(m) {
-//                 console.log('[server](message): %s', JSON.stringify(m));
-//                 _ths.io.emit('message', m);
-//             });
-//
-//             socket.on('disconnect', () => {
-//                 console.log('Client disconnected');
-//             });
-//         });
-//     }
-//
-//     public getApp(): express.Application {
-//         return this.app;
-//     }
-// }
+import {Namespace} from "socket.io";
 
 /**
  * Created by Tomcat  on 31/07/18.
@@ -80,6 +21,7 @@ import { Message } from '../../model';
 
 import { StreamSessions } from './streamSessions'
 import { StreamSession } from './streamSession'
+import { SocketConnector } from './SocketConnector'
 
 
 //CORS middleware
@@ -98,9 +40,12 @@ export class RacerStreamerServer {
 	serviceId: string;
 	expressApp: any;
     private server: any;
-    private io: SocketIO.Server;
 
     protected streamSessions: any;
+
+    private io: SocketIO.Server;
+    private ioNamespace: SocketIO.Namespace;
+    private ioNamespaceName = '/strm';
 
     constructor(port: number, id?: string) {
 
@@ -110,6 +55,7 @@ export class RacerStreamerServer {
 
         this.server = createServer(this.expressApp);
         this.io = socketIo(this.server);
+        this.ioNamespace = this.io.of(this.ioNamespaceName);
 
 		this.expressApp.use(bodyParser.json({limit: "50mb"}));
 		this.expressApp.use(bodyParser.urlencoded({limit: "50mb", extended: true, parameterLimit: 50000}));
@@ -189,23 +135,17 @@ export class RacerStreamerServer {
 		});
 
         // Sockets routing
-        this.io.on('connect', (socket: any) => {
+        this.ioNamespace.on('connect', (socket: any) => {
             console.log('Connected client on port %s.', port);
-            socket.emit('ack', {Status: 200});
+
+            let connector = new SocketConnector(socket, this.ioNamespace);
+            connector.initialize();
 
             socket.on('CH01', (from: any, m: Message) => {
                 console.log('[server][CH01](message): %s, from %s', JSON.stringify(m), JSON.stringify(from));
-                this.io.emit('message', m);
+                this.ioNamespace.emit('message', m);
             });
 
-            socket.on('message', (m: Message) => {
-                console.log('[server](message): %s, from %s', JSON.stringify(m));
-                this.io.emit('message', m);
-            });
-
-            socket.on('disconnect', () => {
-                console.log('Client disconnected');
-            });
         });
 	};
 

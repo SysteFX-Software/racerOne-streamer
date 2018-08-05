@@ -64,7 +64,6 @@ export class StreamSessionManager {
     }
 
     public createSession(sessionData: any, callback: any) {
-        console.log('StreamServer::createSession');
         this.sessions.create(sessionData, (session: string, err) => {
             callback(session, err);
         })
@@ -107,8 +106,6 @@ export class StreamSessionManager {
     }
 
     public checkAuth(req: any, res: any, next: any, callback: any) {
-        console.log('StreamerServer::checkAuth');
-
         let session_id: number = req.query['sid'];
         if (!session_id) {
             session_id = req.headers['authorization'];
@@ -183,11 +180,9 @@ export class StreamSessionManager {
             global.tracer.log('StreamerServer, POST session');
 
             _this.checkAuth(req, res, next, function (authObject? : any) {
-                console.log('setupUserPostApi - after checkAuth');
                 if(authObject) {
                     _this.createSession(req.body.session, function (result: any, err: any) {
                         if (!err) {
-                            console.log('/scp/session - createSession succeeded');
                             _this.server.createSendPkg(res, HttpStatus.OK, { sessionID: result } );
                             next();
                         }
@@ -244,7 +239,7 @@ export class StreamSessionManager {
     public setupUserDelApi(express: any) {
         const _this = this;
 
-        express.delete("/scp/sessions/:id", function (req: any, res: any, next: any) {
+        express.delete("/scp/session/:id", function (req: any, res: any, next: any) {
             global.tracer.log('UserManager, DELETE session');
 
             let sessionId = req.params['id'];
@@ -252,7 +247,7 @@ export class StreamSessionManager {
 
                 if (authObject !== undefined) {
                     _this.removeSession(sessionId, (result: boolean, err: any) => {
-                        if (res) {
+                        if (result) {
                             _this.server.sendPkg(res, HttpStatus.OK, result, undefined);
                             next();
                         } else {

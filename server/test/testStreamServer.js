@@ -26,8 +26,6 @@ global.tracer = require( 'tracer' ).colorConsole({
     format: [ '{{timestamp}} {{title}}: {{message}} [{{file}}:{{line}}]' ],
     transport : function(data) {
 
-        console.log(data.output);
-
         let show = false;
         if (data.output.indexOf("error:") > -1) show = true;
         if (data.output.indexOf("POOL:") > -1) show = true;
@@ -56,7 +54,7 @@ global.tracer = require( 'tracer' ).colorConsole({
     const invalidCustomerID = 'BT2014:004:9acf38f6-d3c8-4429-a010-ed73088afbd:0';
 
     let testSession/*: StreamSession*/ = {
-        id: '',
+        id: 'SS20181533492540111',
         track_id: '',
         customer_id: 'BT2014:002:9acf38f6-d3c8-4429-a010-ed73088afbbd:1518437910234',
         device_id: 'DEV12345',
@@ -120,7 +118,27 @@ global.tracer = require( 'tracer' ).colorConsole({
                 .expect(200)
                 .end(function (err, res) {
                     if (err) return done(err);
-                    testSession.id = res.body.result.sessionID;
+                    done();
+                });
+        });
+
+        it('Get session parameters', function (done) {
+            this.timeout(20000);
+
+            request(testService.getExpress())
+                .get('/scp/session/' + testSession.id)
+                .set('Accept', 'application/json')
+                .expect('Content-Type', /json/)
+                .expect(200)
+                .end(function (err, res) {
+                    if (err) return done(err);
+
+                    let session = res.body.result;
+
+                    assert.equal(session.track_id, testSession.track_id, "Track ID must be correct");
+                    assert.equal(session.customer_id, testSession.customer_id, "Customer ID must be correct");
+                    assert.equal(session.name, testSession.name, "Name must be correct");
+
                     done();
                 });
         });
@@ -132,6 +150,7 @@ global.tracer = require( 'tracer' ).colorConsole({
             this.timeout(20000);
 
             // Make new track parameters
+            testSessionUpdatedParameters.track_id = testTrackId1;
             testSessionUpdatedParameters.name = 'Test track 01 (updated)';
             testSessionUpdatedParameters.tag += ',#updated';
             testSessionUpdatedParameters.start_time = '2017-12-13 08:15:31';
@@ -152,22 +171,22 @@ global.tracer = require( 'tracer' ).colorConsole({
                 .end(function (err, res) {
                     if (err) return done(err);
 
-                    done();
-                });
-        });
+                    request(testService.getExpress())
+                        .get('/scp/session/' + testSession.id)
+                        .set('Accept', 'application/json')
+                        .expect('Content-Type', /json/)
+                        .expect(200)
+                        .end(function (err, res) {
+                            if (err) return done(err);
 
-        it('Get session parameters', function (done) {
-            this.timeout(20000);
+                            let session = res.body.result;
 
-            request(testService.getExpress())
-                .get('/scp/session/' + testSession.id)
-                .set('Accept', 'application/json')
-                .expect('Content-Type', /json/)
-                .expect(200)
-                .end(function (err, res) {
-                    if (err) return done(err);
+                            assert.equal(session.track_id, testSessionUpdatedParameters.track_id, "Track ID must be correct");
+                            assert.equal(session.tag, testSessionUpdatedParameters.tag, "Tags must be correct");
+                            assert.equal(session.name, testSessionUpdatedParameters.name, "Name must be correct");
 
-                    done();
+                            done();
+                        });
                 });
         });
 
@@ -188,22 +207,65 @@ global.tracer = require( 'tracer' ).colorConsole({
                 });
         });
 
+
         it('Delete session', function (done) {
             this.timeout(100000);
 
+            // Add another session
+            let testAnotherSession = Object.assign({}, testSession);
+            testAnotherSession.id = '';
             request(testService.getExpress())
-                .delete('/api/session/' + testSession.id)
+                .post('/scp/session')
                 .set('Accept', 'application/json')
                 .set('Content-Type', 'application/json')
-                .send()
+                .send({
+                    session: testAnotherSession
+                })
                 .expect('Content-Type', /json/)
                 .expect(200)
                 .end(function (err, res) {
-                    if (err) {
-                        console.log("ERROR: " + err); return done(err);
-                    }
-                    done();
+                    if (err) return done(err);
+
+                    request(testService.getExpress())
+                        .get('/scp/sessions')
+                        .set('Accept', 'application/json')
+                        .expect('Content-Type', /json/)
+                        .expect(200)
+                        .end(function (err, res) {
+                            if (err) return done(err);
+
+                            assert.equal(res.body.result.length, 2, "Must contain TWO created Sessions");
+
+                            request(testService.getExpress())
+                                .delete('/scp/session/' + testSession.id)
+                                .set('Accept', 'application/json')
+                                .set('Content-Type', 'application/json')
+                                .send()
+                                .expect('Content-Type', /json/)
+                                .expect(200)
+                                .end(function (err, res) {
+                                    if (err) {
+                                        console.log("ERROR: " + err); return done(err);
+                                    }
+
+                                    assert.equal(res.body.result, true, "Must contain successful result");
+
+                                    request(testService.getExpress())
+                                        .get('/scp/sessions')
+                                        .set('Accept', 'application/json')
+                                        .expect('Content-Type', /json/)
+                                        .expect(200)
+                                        .end(function (err, res) {
+                                            if (err) return done(err);
+
+                                            assert.equal(res.body.result.length, 1, "Must contain ONE left Session");
+
+                                            done();
+                                        });
+                                });
+                    });
                 });
+
         });
     });
 })();
