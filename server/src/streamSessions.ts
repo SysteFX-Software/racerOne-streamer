@@ -97,7 +97,7 @@ export class StreamSessions {
         let session = new StreamSession(sessionData);
         if (session && session.isValid()) {
             if(this._add(session.id, session)) {
-                callback(session.id, undefined);
+                callback(session, undefined);
             }
             else {
                 callback(null, { code: 'ER_SESSION_NOT_FOUND',
@@ -142,6 +142,17 @@ export class StreamSessions {
 
     public getSession(sessionId: string): StreamSession {
         return this._get(sessionId);
+    }
+
+    public getSessionByTrackId(trackId: string): StreamSession {
+        for(let sid in this.sessions) {
+            let session: StreamSession = this.sessions[sid];
+            if(session.track_id === trackId) {
+                return session;
+            }
+        }
+
+        return null;
     }
 
     public getSessions(): string[] {

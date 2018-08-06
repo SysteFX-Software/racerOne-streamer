@@ -115,7 +115,7 @@ global.tracer = require( 'tracer' ).colorConsole({
                     session: testSession
                 })
                 .expect('Content-Type', /json/)
-                .expect(200)
+                .expect(201)
                 .end(function (err, res) {
                     if (err) return done(err);
                     done();

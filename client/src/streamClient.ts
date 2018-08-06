@@ -25,6 +25,17 @@ export class StreamClient {
     }
 
     private connect(): void {
+        let joinReq = {
+            force_create_session: true,
+            session: {
+                track_id: 'VT2018:001:80f8d006-df86-4767-ae0a-b35e60cabda3:1520414422944',
+                customer_id: 'BT2014:002:9acf38f6-d3c8-4429-a010-ed73088afbbd:1518437910234',
+                device_id: 'DEV12345',
+                name: 'Test session 01',
+
+            }
+        }
+
         console.log('Connecting client on port %s.', this.port);
         let socket = socketIo.connect('http://localhost:'+this.port+'/strm', {reconnect: true});
 
@@ -33,12 +44,11 @@ export class StreamClient {
             console.log('Connected!');
 
             console.log('Sending SYN');
-            let m = {session_id: 'SSTEST'};
-            socket.emit('syn', JSON.stringify(m));
+            socket.emit('syn', JSON.stringify(joinReq));
         });
 
-        socket.on('message', (m: Message) => {
-            console.log('[server](message): %s', JSON.stringify(m));
+        socket.on('traq-evt', function(m: any) {
+            console.log('traq-evt(client): ' + JSON.stringify(m));
         });
 
         socket.on('syn-ack', (m: any) => {
@@ -46,11 +56,17 @@ export class StreamClient {
             if(m.status != HttpStatus.OK) {
                 socket.disconnect();
             }
+            else {
+                socket.emit('traq-evt', JSON.stringify({message: "traqued event data"}));
+            }
         });
 
-        socket.on('disconnected', () => {
-            console.log('Disconnected!');
+        socket.on('disconnect', function(m: any) {
+            console.log('server disconnected from client');
         });
+        // socket.on('disconnect', () => {
+        //     console.log('Disconnected!');
+        // });
     }
 
     public getApp(): express.Application {

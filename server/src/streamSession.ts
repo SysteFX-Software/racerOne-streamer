@@ -4,6 +4,7 @@
  */
 
 import {RacerStreamerServer} from "./streamServer";
+import {SocketConnector} from "./SocketConnector";
 
 export enum StreamSessionState {
     DATA_VALID = 1,
@@ -32,6 +33,9 @@ export class StreamSession {
     stop_time: Date;
     total_time: number;
 
+    private clients: any = {};
+
+
     // IValidated
     isDataValid = false;
 
@@ -48,6 +52,24 @@ export class StreamSession {
         this.updateFromData(data);
 
         this.isDataValid = StreamSession.validateParams(this);
+    }
+
+    public addClient(client: SocketConnector): boolean {
+        if(this.clients[client.getClientId()] === undefined) {
+            this.clients[client.getClientId()] = client;
+            return true;
+        }
+
+        return false;
+    }
+
+    public removeClient(client: SocketConnector): boolean {
+        if(this.clients[client.getClientId()] === undefined) {
+            delete this.clients[client.getClientId()];
+            return true;
+        }
+
+        return false;
     }
 
     public isValid(): boolean {

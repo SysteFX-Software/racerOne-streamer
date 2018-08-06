@@ -3,6 +3,7 @@ import {StreamSession} from './streamSession';
 import {StreamSessions} from './streamSessions';
 
 import * as HttpStatus from 'http-status-codes';
+import {SocketConnector} from "./SocketConnector";
 
 
 declare function require(name: string): any;
@@ -64,7 +65,7 @@ export class StreamSessionManager {
     }
 
     public createSession(sessionData: any, callback: any) {
-        this.sessions.create(sessionData, (session: string, err) => {
+        this.sessions.create(sessionData, (session: StreamSession, err) => {
             callback(session, err);
         })
     }
@@ -97,12 +98,39 @@ export class StreamSessionManager {
         return this.sessions.getSession(sessionId);
     };
 
+    public getSessionByTrackId(trackId: string): StreamSession {
+        return this.sessions.getSessionByTrackId(trackId);
+    };
+
     public getSessionsList(): string[] {
         return this.sessions.getSessions();
     }
 
     public removeSession(sessionId: string, callback: any) {
         return this.sessions.delete(sessionId, callback);
+    }
+
+    public addClientToSession(client: SocketConnector, joinReq: any, callback: any): any {
+        let streamedTrack = joinReq.session.track_id;
+        let session = this.getSessionByTrackId(streamedTrack);
+
+        if(!session) {
+            if(joinReq.force_create_session) {
+                this.createSession(joinReq.session, function(newSession: StreamSession, err: any) {
+                    if(!err) {
+                        newSession.addClient(client);
+                        callback(newSession, null);
+                    }
+                });
+            }
+            else {
+                callback(null, { code: HttpStatus.NOT_FOUND });
+            }
+        }
+        else {
+            session.addClient(client);
+            callback(session, null);
+        }
     }
 
     public checkAuth(req: any, res: any, next: any, callback: any) {
@@ -181,9 +209,9 @@ export class StreamSessionManager {
 
             _this.checkAuth(req, res, next, function (authObject? : any) {
                 if(authObject) {
-                    _this.createSession(req.body.session, function (result: any, err: any) {
+                    _this.createSession(req.body.session, function (session: StreamSession, err: any) {
                         if (!err) {
-                            _this.server.createSendPkg(res, HttpStatus.OK, { sessionID: result } );
+                            _this.server.createSendPkg(res, HttpStatus.CREATED, { sessionID: session.id } );
                             next();
                         }
                         else {
