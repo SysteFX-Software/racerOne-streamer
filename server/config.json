@@ -8,30 +8,5 @@
     "ports": {
         "service": 8060,
         "admin": 8061
-    },
-    "mysql": {
-        "host": "localhost",
-        "user": "racer",
-        "password": "password",
-        "database": "racer_project",
-        "timezone": "utc"
-    },
-    "trackbox": {
-        "body_storage": {
-            "active_storage": "mysql",
-
-            "aws/s3": {
-                "accessKeyId": "AKIAI675KTPYHVJWNA4A",
-                "secretAccessKey": "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",
-                "region": "eu-central-1"
-            },
-
-            "mysql": {
-                "host": "localhost",
-                "user": "racer",
-                "password": "password",
-                "database": "racer_project"
-            }
-        }
     }
 }
