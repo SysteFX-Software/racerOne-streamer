@@ -4,9 +4,9 @@
  */
 import * as socketIo from 'socket.io';
 import {Message} from "../../model";
-import {StreamSession} from "./streamSession";
+import {StreamSession} from "./StreamSession";
 
-const StreamSessionManager = require('./streamSessionManager'); // singleton class
+const StreamSessionManager = require('./StreamSessionManager'); // singleton class
 
 let HttpStatus = require('http-status-codes');
 
@@ -47,22 +47,24 @@ export class SocketConnector {
                     __this.socket.emit('syn-ack', { status: HttpStatus.OK, session_id: joinedSession.id });
                 }
                 else if(err) {
-                    console.log('socket.on(syn): sending syn-ack-status: '+err.code);
-                    __this.socket.emit('syn-ack', {status: err.code});
+                    console.log('socket.on(syn): sending syn-nack-status: '+err.code);
+                    __this.socket.emit('syn-nack', {status: err.code});
                 }
             });
         });
 
         // track data observer
         this.socket.on('traq-evt', function(m: any) {
-            console.log('traq-evt(server): ' + JSON.stringify(m));
+            console.log('traq-evt(server): ' + m);
             __this.socket.to(__this.session.id).emit('traq-evt', m);
         });
 
         // graceful disconnect
         this.socket.on('disconnect', function(m: any) {
             console.log('client disconnected from server');
-            __this.session.removeClient(__this);
+            if(__this.session) {
+                __this.session.removeClient(__this);
+            }
         });
 
         return true;

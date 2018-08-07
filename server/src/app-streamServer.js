@@ -3,7 +3,7 @@
  * TrackBox Service
  */
 
-let RacerStreamerServer = require('./streamServer');
+let RacerStreamerServer = require('./StreamServer');
 
 global._projDir = __dirname;
 

@@ -6,7 +6,7 @@
 
 import * as HttpStatus from "http-status-codes";
 
-import { StreamSession } from './streamSession';
+import { StreamSession } from './StreamSession';
 
 
 declare function require(name: string): any;
@@ -57,14 +57,15 @@ export class StreamSessions {
         }
     }
 
-    public update(sessionData: any, callback: any) {
+    public update(sessionId: string, sessionData: any, callback: any) {
         // unescape data
         Object.keys(sessionData).forEach(function (name) {
             sessionData[name] = decodeURI(sessionData[name]);
         });
 
-        let session: StreamSession = this.getSession(sessionData.id);
-        if (StreamSession.validateId(sessionData.id) ) {
+        let session: StreamSession = this.getSession(sessionId);
+        if (session) {
+            sessionData.id = sessionId;
             this.updateData(session, sessionData, callback);
         }
         else {
@@ -100,8 +101,8 @@ export class StreamSessions {
                 callback(session, undefined);
             }
             else {
-                callback(null, { code: 'ER_SESSION_NOT_FOUND',
-                    HTTP_code: HttpStatus.NOT_FOUND, msg: "Session ID not found" });
+                callback(null, { code: 'ER_SESSION_ALREADY_EXISTS',
+                    HTTP_code: HttpStatus.CONFLICT, msg: "Session ID already exists" });
             }
         }
         else {
@@ -144,11 +145,24 @@ export class StreamSessions {
         return this._get(sessionId);
     }
 
-    public getSessionByTrackId(trackId: string): StreamSession {
+    public getSessionBy(sessionData: any): StreamSession {
         for(let sid in this.sessions) {
             let session: StreamSession = this.sessions[sid];
-            if(session.track_id === trackId) {
-                return session;
+
+            if(sessionData.track_id !== undefined) {
+                if(session.track_id === sessionData.track_id) {
+                    return session;
+                }
+            }
+            else if (sessionData.device_id !== undefined) {
+                if(session.device_id === sessionData.device_id) {
+                    return session;
+                }
+            }
+            else if (sessionData.customer_id !== undefined) {
+                if(session.customer_id === sessionData.customer_id) {
+                    return session;
+                }
             }
         }
 

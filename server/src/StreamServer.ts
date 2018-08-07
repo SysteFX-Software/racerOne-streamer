@@ -11,7 +11,7 @@ declare let global: any;
 let express = require('express');
 let bodyParser = require('body-parser');
 let HttpStatus = require('http-status-codes');
-let StreamSessionManager = require('./streamSessionManager'); // singleton class
+let StreamSessionManager = require('./StreamSessionManager'); // singleton class
 
 import { createServer, Server } from 'http';
 
@@ -19,8 +19,8 @@ import * as socketIo from 'socket.io';
 
 import { Message } from '../../model';
 
-import { StreamSessions } from './streamSessions'
-import { StreamSession } from './streamSession'
+import { StreamSessions } from './StreamSessions'
+import { StreamSession } from './StreamSession'
 import { SocketConnector } from './SocketConnector'
 
 

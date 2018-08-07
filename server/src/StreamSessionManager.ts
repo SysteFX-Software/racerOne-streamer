@@ -1,6 +1,6 @@
 
-import {StreamSession} from './streamSession';
-import {StreamSessions} from './streamSessions';
+import {StreamSession} from './StreamSession';
+import {StreamSessions} from './StreamSessions';
 
 import * as HttpStatus from 'http-status-codes';
 import {SocketConnector} from "./SocketConnector";
@@ -80,6 +80,16 @@ export class StreamSessionManager {
         }
     }
 
+    public getSessionDataBy(sessionData: any, callback: any) {
+        let session = this.getSessionBy(sessionData);
+        if(session) {
+            callback(session.clientFriendly(), undefined);
+        }
+        else {
+            callback(null, true);
+        }
+    }
+
     public getSessions(callback: any) {
         let sessions = this.getSessionsList();
         if(sessions) {
@@ -98,8 +108,8 @@ export class StreamSessionManager {
         return this.sessions.getSession(sessionId);
     };
 
-    public getSessionByTrackId(trackId: string): StreamSession {
-        return this.sessions.getSessionByTrackId(trackId);
+    public getSessionBy(sessionData: any): StreamSession {
+        return this.sessions.getSessionBy(sessionData);
     };
 
     public getSessionsList(): string[] {
@@ -110,9 +120,9 @@ export class StreamSessionManager {
         return this.sessions.delete(sessionId, callback);
     }
 
-    public addClientToSession(client: SocketConnector, joinReq: any, callback: any): any {
+    public addSocketClientToSession(client: SocketConnector, joinReq: any, callback: any): any {
         let streamedTrack = joinReq.session.track_id;
-        let session = this.getSessionByTrackId(streamedTrack);
+        let session = this.getSessionBy({track_id: streamedTrack} );
 
         if(!session) {
             if(joinReq.force_create_session) {
@@ -133,7 +143,7 @@ export class StreamSessionManager {
         }
     }
 
-    public checkAuth(req: any, res: any, next: any, callback: any) {
+    public checkAuth(req: any, res: any, callback: any) {
         let session_id: number = req.query['sid'];
         if (!session_id) {
             session_id = req.headers['authorization'];
@@ -160,9 +170,9 @@ export class StreamSessionManager {
          *
          * result: track metadata
          */
-        express.get("/scp/session/:id", function (req: any, res: any, next: any) {
+        express.get("/scp/sessions/:id", function (req: any, res: any, next: any) {
             global.tracer.log('StreamerServer, GET meta');
-            _this.checkAuth(req, res, next, function (authObject?: any) {
+            _this.checkAuth(req, res, function (authObject?: any) {
                 let sessionId: string = req.params['id'];
                 _this.getSessionData(sessionId, function (result: any, err: any) {
                     if (!err) {
@@ -178,7 +188,39 @@ export class StreamSessionManager {
 
         express.get("/scp/sessions", function (req: any, res: any, next: any) {
             global.tracer.log('StreamerServer, GET meta');
-            _this.checkAuth(req, res, next, function (authObject?: any) {
+            _this.checkAuth(req, res, function (authObject?: any) {
+                let track_id = req.query['track_id'];
+                let device_id = req.query['device_id'];
+                let customer_id = req.query['customer_id'];
+
+                if(track_id || device_id || customer_id) {
+                    _this.getSessionDataBy({track_id: track_id, device_id: device_id, customer_id: customer_id}, function (result: any, err: any) {
+                        if (!err) {
+                            _this.server.createSendPkg(res, HttpStatus.OK, result);
+                            next();
+                        }
+                        else {
+                            _this.server.createSendPkg(res, HttpStatus.NOT_FOUND, null, err);
+                        }
+                    });
+                }
+                else {
+                    _this.getSessions(function (result: any, err: any) {
+                        if (!err) {
+                            _this.server.createSendPkg(res, HttpStatus.OK, result);
+                            next();
+                        }
+                        else {
+                            _this.server.createSendPkg(res, HttpStatus.NOT_FOUND, null, err);
+                        }
+                    });
+                }
+            });
+        });
+
+        express.get("/scp/sessions", function (req: any, res: any, next: any) {
+            global.tracer.log('StreamerServer, GET meta');
+            _this.checkAuth(req, res, function (authObject?: any) {
                 _this.getSessions(function (result: any, err: any) {
                     if (!err) {
                         _this.server.createSendPkg(res, HttpStatus.OK, result);
@@ -203,11 +245,11 @@ export class StreamSessionManager {
          *
          * result: null
          */
-        express.post("/scp/session", function (req: any, res: any, next: any) {
+        express.post("/scp/sessions", function (req: any, res: any, next: any) {
             // let requestData = ver.parseTrackBoxDataParameters(req.body);
             global.tracer.log('StreamerServer, POST session');
 
-            _this.checkAuth(req, res, next, function (authObject? : any) {
+            _this.checkAuth(req, res, function (authObject? : any) {
                 if(authObject) {
                     _this.createSession(req.body.session, function (session: StreamSession, err: any) {
                         if (!err) {
@@ -246,14 +288,15 @@ export class StreamSessionManager {
          *
          * result: HTTP Status (200 - OK, 400 - invalid track id, 404 - track not found)
          */
-        express.put('/scp/session', function (req: any, res: any, next: any) {
+        express.put('/scp/sessions/:id', function (req: any, res: any, next: any) {
             global.tracer.log('StreamerServer, PUT session');
             const sessionData = req.body.session;
 
-            _this.checkAuth(req, res, next, function (user: any) {
-                _this.sessions.update(sessionData, function (result: string, err: any) {
+            _this.checkAuth(req, res, function (user: any) {
+                let sessionId: string = req.params['id'];
+                _this.sessions.update(sessionId, sessionData, function (result: string, err: any) {
                     if (!err) {
-                        _this.server.createSendPkg(res, HttpStatus.OK, result);
+                        _this.server.createSendPkg(res, HttpStatus.ACCEPTED, result);
                         next();
                     }
                     else {
@@ -267,16 +310,16 @@ export class StreamSessionManager {
     public setupUserDelApi(express: any) {
         const _this = this;
 
-        express.delete("/scp/session/:id", function (req: any, res: any, next: any) {
+        express.delete("/scp/sessions/:id", function (req: any, res: any, next: any) {
             global.tracer.log('UserManager, DELETE session');
 
             let sessionId = req.params['id'];
-            _this.checkAuth(req, res, next, function (authObject: any) {
+            _this.checkAuth(req, res, function (authObject: any) {
 
                 if (authObject !== undefined) {
                     _this.removeSession(sessionId, (result: boolean, err: any) => {
                         if (result) {
-                            _this.server.sendPkg(res, HttpStatus.OK, result, undefined);
+                            _this.server.sendPkg(res, HttpStatus.ACCEPTED, result, undefined);
                             next();
                         } else {
                             _this.server.sendPkg(res, HttpStatus.NOT_FOUND, null, err);

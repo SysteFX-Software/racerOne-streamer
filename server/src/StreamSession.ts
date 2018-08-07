@@ -3,7 +3,7 @@
  *
  */
 
-import {RacerStreamerServer} from "./streamServer";
+import {RacerStreamerServer} from "./StreamServer";
 import {SocketConnector} from "./SocketConnector";
 
 export enum StreamSessionState {

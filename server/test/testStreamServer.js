@@ -1,8 +1,8 @@
 /**
  * Created by viktorkorotya on 01/12/17.
  */
-const RacerStreamerServer = require("../src/streamServer");
-const StreamSession = require("../src/streamSession");
+const RacerStreamerServer = require("../src/StreamServer");
+const StreamSession = require("../src/StreamSession");
 
 let fs = require('fs');
 
@@ -92,7 +92,7 @@ global.tracer = require( 'tracer' ).colorConsole({
         it('Create session with INVALID track data', function (done) {
 
             request(testService.getExpress())
-                .post('/scp/session')
+                .post('/scp/sessions')
                 .set('Accept', 'application/json')
                 .set('Content-Type', 'application/json')
                 .send({
@@ -108,7 +108,7 @@ global.tracer = require( 'tracer' ).colorConsole({
             let testInvalidSession = Object.assign({}, testSession);
 
             request(testService.getExpress())
-                .post('/scp/session')
+                .post('/scp/sessions')
                 .set('Accept', 'application/json')
                 .set('Content-Type', 'application/json')
                 .send({
@@ -126,7 +126,7 @@ global.tracer = require( 'tracer' ).colorConsole({
             this.timeout(20000);
 
             request(testService.getExpress())
-                .get('/scp/session/' + testSession.id)
+                .get('/scp/sessions/' + testSession.id)
                 .set('Accept', 'application/json')
                 .expect('Content-Type', /json/)
                 .expect(200)
@@ -138,6 +138,63 @@ global.tracer = require( 'tracer' ).colorConsole({
                     assert.equal(session.track_id, testSession.track_id, "Track ID must be correct");
                     assert.equal(session.customer_id, testSession.customer_id, "Customer ID must be correct");
                     assert.equal(session.name, testSession.name, "Name must be correct");
+
+                    done();
+                });
+        });
+
+        it('Get session parameters by track ID', function (done) {
+            this.timeout(20000);
+
+            request(testService.getExpress())
+                .get('/scp/sessions?track_id=' + testSession.track_id)
+                .set('Accept', 'application/json')
+                .expect('Content-Type', /json/)
+                .expect(200)
+                .end(function (err, res) {
+                    if (err) return done(err);
+
+                    let session = res.body.result;
+
+                    assert.equal(session.track_id, testSession.track_id, "Track ID must be correct");
+
+                    done();
+                });
+        });
+
+        it('Get session parameters by device ID', function (done) {
+            this.timeout(20000);
+
+            request(testService.getExpress())
+                .get('/scp/sessions?device_id=' + testSession.device_id)
+                .set('Accept', 'application/json')
+                .expect('Content-Type', /json/)
+                .expect(200)
+                .end(function (err, res) {
+                    if (err) return done(err);
+
+                    let session = res.body.result;
+
+                    assert.equal(session.device_id, testSession.device_id, "Device ID must be correct");
+
+                    done();
+                });
+        });
+
+        it('Get session parameters by customer ID', function (done) {
+            this.timeout(20000);
+
+            request(testService.getExpress())
+                .get('/scp/sessions?customer_id=' + testSession.customer_id)
+                .set('Accept', 'application/json')
+                .expect('Content-Type', /json/)
+                .expect(200)
+                .end(function (err, res) {
+                    if (err) return done(err);
+
+                    let session = res.body.result;
+
+                    assert.equal(session.customer_id, testSession.customer_id, "Customer ID must be correct");
 
                     done();
                 });
@@ -160,19 +217,19 @@ global.tracer = require( 'tracer' ).colorConsole({
             testSessionUpdatedParameters.moving_time = testSessionUpdatedParameters.total_time - 1200;
 
             request(testService.getExpress())
-                .put('/scp/session')
+                .put('/scp/sessions/'+testSessionUpdatedParameters.id)
                 .set('Accept', 'application/json')
                 .set('Content-Type', 'application/json')
                 .send({
                     session: testSessionUpdatedParameters
                 })
                 .expect('Content-Type', /json/)
-                .expect(200)
+                .expect(202)
                 .end(function (err, res) {
                     if (err) return done(err);
 
                     request(testService.getExpress())
-                        .get('/scp/session/' + testSession.id)
+                        .get('/scp/sessions/' + testSessionUpdatedParameters.id)
                         .set('Accept', 'application/json')
                         .expect('Content-Type', /json/)
                         .expect(200)
@@ -215,14 +272,14 @@ global.tracer = require( 'tracer' ).colorConsole({
             let testAnotherSession = Object.assign({}, testSession);
             testAnotherSession.id = '';
             request(testService.getExpress())
-                .post('/scp/session')
+                .post('/scp/sessions')
                 .set('Accept', 'application/json')
                 .set('Content-Type', 'application/json')
                 .send({
                     session: testAnotherSession
                 })
                 .expect('Content-Type', /json/)
-                .expect(200)
+                .expect(201)
                 .end(function (err, res) {
                     if (err) return done(err);
 
@@ -237,12 +294,12 @@ global.tracer = require( 'tracer' ).colorConsole({
                             assert.equal(res.body.result.length, 2, "Must contain TWO created Sessions");
 
                             request(testService.getExpress())
-                                .delete('/scp/session/' + testSession.id)
+                                .delete('/scp/sessions/' + testSession.id)
                                 .set('Accept', 'application/json')
                                 .set('Content-Type', 'application/json')
                                 .send()
                                 .expect('Content-Type', /json/)
-                                .expect(200)
+                                .expect(202)
                                 .end(function (err, res) {
                                     if (err) {
                                         console.log("ERROR: " + err); return done(err);

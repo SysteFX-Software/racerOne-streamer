@@ -26,7 +26,7 @@ export class StreamClient {
 
     private connect(): void {
         let joinReq = {
-            force_create_session: true,
+            force_create_session: false,
             session: {
                 track_id: 'VT2018:001:80f8d006-df86-4767-ae0a-b35e60cabda3:1520414422944',
                 customer_id: 'BT2014:002:9acf38f6-d3c8-4429-a010-ed73088afbbd:1518437910234',
@@ -41,32 +41,24 @@ export class StreamClient {
 
         // Add a connect listener
         socket.on('connect', function (s) {
-            console.log('Connected!');
-
-            console.log('Sending SYN');
             socket.emit('syn', JSON.stringify(joinReq));
         });
 
-        socket.on('traq-evt', function(m: any) {
-            console.log('traq-evt(client): ' + JSON.stringify(m));
-        });
-
         socket.on('syn-ack', (m: any) => {
-            console.log('[server](syn-ack): %s', JSON.stringify(m));
-            if(m.status != HttpStatus.OK) {
-                socket.disconnect();
-            }
-            else {
-                socket.emit('traq-evt', JSON.stringify({message: "traqued event data"}));
-            }
+            // safe to start streaming
+            socket.emit('traq-evt', "traqued event data");
         });
 
-        socket.on('disconnect', function(m: any) {
-            console.log('server disconnected from client');
+        socket.on('syn-nack', (m: any) => {
+            socket.disconnect();
         });
-        // socket.on('disconnect', () => {
-        //     console.log('Disconnected!');
-        // });
+
+        socket.on('traq-evt', function(m: any) {
+            console.log('traq-evt(client): ' + m);
+        });
+
+        socket.on('disconnect', () => {
+        });
     }
 
     public getApp(): express.Application {
